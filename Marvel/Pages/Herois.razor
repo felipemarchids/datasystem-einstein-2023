@@ -1,0 +1,90 @@
+﻿@page "/herois"
+@using Data
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Text;
+@using System.Security.Cryptography;
+
+<PageTitle>Heróis</PageTitle>
+
+<h1>Heróis</h1>
+
+@if (carregando)
+{
+    <div class="spinner"></div>
+}
+else
+{
+    if (retornouRegistro)
+    {
+        <div class="card">
+            <img src="@caminhoImagem" alt="Avatar" style="width:100%">
+            <div class="container">
+                <h4><b>@heroi.Data?.Results?.FirstOrDefault()?.Name</b></h4>
+                <p>@heroi.Data?.Results?.FirstOrDefault()?.Description</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <img src="image\notFound.jpg" alt="Avatar" style="width:100%">
+            <div class="container">
+                <h4><b>Registro não localizado</b></h4>
+                <p>Verifique seu código, pois algo não está certo.</p>
+            </div>
+        </div>
+    }
+
+    <br />
+
+    <button class="btn btn-primary" @onclick="Ironman">Homem de Ferro</button>
+    <button class="btn btn-primary" @onclick="Thor">Thor</button>
+    <button class="btn btn-primary" @onclick="Captain">Capitão America</button>
+}
+
+@code {
+    private Personagem heroi = new Personagem();
+    private bool carregando = false;
+    private bool retornouRegistro = true;
+    private string caminhoImagem;
+    private async Task ProximoHeroi(string nomeHeroi)
+    {
+        carregando = true;
+        retornouRegistro = true;
+        var ts = DateTime.Now.Ticks.ToString();
+        var publicKey = "2266bfd7436eae54f5ef51529af3f659";
+        var privateKey = "4d9cb4a5758f2c898c09a29a788c3f80e15c4c2a";
+        var hash = Funcoes.GerarHash(ts, publicKey, privateKey);
+        var url = $"http://gateway.marvel.com/v1/public/characters?name={nomeHeroi}&apikey={publicKey}&ts={ts}&hash={hash}";
+
+        HttpClient httpCliente = new HttpClient();
+        heroi = await httpCliente.GetFromJsonAsync<Personagem>(url);
+        caminhoImagem = $"{@heroi.Data?.Results?.FirstOrDefault()?.Thumbnail.Path}.{@heroi.Data?.Results?.FirstOrDefault()?.Thumbnail.Extension}";
+        
+        if (heroi.Data?.Results?.Count == 0)
+            retornouRegistro = false;
+
+        carregando = false;
+    }
+
+    private async Task Ironman()
+    {
+        await ProximoHeroi("iron man");
+    }
+
+    private async Task Thor()
+    {
+        await ProximoHeroi("thor");
+    }
+
+    private async Task Captain()
+    {
+        await ProximoHeroi("captain america");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ProximoHeroi("iron man");
+    }
+}
